@@ -1,19 +1,19 @@
 package hephaestus
 
 import (
-	"os"
 	"io"
+	"os"
 	"time"
 )
 
 type memBlob struct {
-	name string
-	modtime time.Time
-	size int64
-	mode os.FileMode
+	name     string
+	modtime  time.Time
+	size     int64
+	mode     os.FileMode
 	contents io.Reader
-	source string
-	err error
+	source   string
+	err      error
 }
 
 func (b *memBlob) Name() string {
@@ -33,7 +33,7 @@ func (b *memBlob) ModTime() time.Time {
 }
 
 func (b *memBlob) IsDir() bool {
-	return len(b.name) == 0 || b.name[len(b.name) - 1] == '/'
+	return len(b.name) == 0 || b.name[len(b.name)-1] == '/'
 }
 
 func (b *memBlob) Sys() interface{} {
@@ -54,23 +54,23 @@ func (b *memBlob) Source() string {
 
 func copyof(b Blob) *memBlob {
 	return &memBlob{
-		name: b.Name(),
-		modtime: b.ModTime(),
-		size: b.Size(),
-		mode: b.Mode(),
+		name:     b.Name(),
+		modtime:  b.ModTime(),
+		size:     b.Size(),
+		mode:     b.Mode(),
 		contents: b.Contents(),
-		err: b.Error(),
-		source: b.Source(),
+		err:      b.Error(),
+		source:   b.Source(),
 	}
 }
 
-func makeTree(handler func (Tree)) Tree {
+func makeTree(handler func(Tree)) Tree {
 	result := make(Tree, 0)
-	
+
 	go func() {
 		handler(result)
 		close(result)
 	}()
-	
+
 	return result
 }
