@@ -1,8 +1,7 @@
-package hephaestus
+package anvil
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -10,15 +9,8 @@ import (
 
 const uint32max = 4294967295
 
-type blobSorter []Blob
-
-func (s blobSorter) Len() int           { return len(s) }
-func (s blobSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s blobSorter) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
-
-// Reads a tree from the given zip stream, marking the blobs as being from the
-// given source.
-func FromZipFile(r *zip.ReadCloser, source string) Tree {
+// Reads a Tree from the given zip file stream.
+func FromZip(r *zip.Reader, source string) Tree {
 	return makeTree(func(result Tree) {
 
 		blobs := make([]Blob, 0)
@@ -32,11 +24,21 @@ func FromZipFile(r *zip.ReadCloser, source string) Tree {
 
 			r, err := f.Open()
 
+			// FIXME: deal with bugs in Zip format
+			// t := f.ModTime().UTC()
+			// utcd := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.Local).Local()
+
+			sz := int64(f.UncompressedSize64)
+
+			if strings.HasSuffix(f.Name, "/") {
+				sz = 0
+			}
+
 			blob := &memBlob{
 				name:     f.Name,
 				modtime:  f.ModTime(),
 				mode:     f.Mode(),
-				size:     int64(f.UncompressedSize64),
+				size:     sz,
 				contents: r,
 				err:      err,
 				source:   source,
@@ -50,7 +52,7 @@ func FromZipFile(r *zip.ReadCloser, source string) Tree {
 			blobs = append(blobs, blob)
 		}
 
-		sort.Sort(blobSorter(blobs))
+		sort.Sort(sortBlobs(blobs))
 
 		var prev Blob
 
@@ -61,13 +63,14 @@ func FromZipFile(r *zip.ReadCloser, source string) Tree {
 			}
 			prev = blob
 		}
-	})
+
+	}).withValidation()
 }
 
 // Writes this tree to the given zip file, returning an error on failure.
 func (t Tree) ToZip(w *zip.Writer) error {
 	for blob := range t {
-		fmt.Printf("writing %s\n", blob.Name())
+
 		hdr, err := zip.FileInfoHeader(blob)
 		if err != nil {
 			return err
@@ -89,6 +92,8 @@ func (t Tree) ToZip(w *zip.Writer) error {
 			return blob.Error()
 		}
 	}
+
+	w.Close()
 
 	return nil
 }

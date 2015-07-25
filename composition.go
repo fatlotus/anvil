@@ -2,22 +2,14 @@ package hephaestus
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-// Running cleanPath returns a relative version of the string without . or ..
-func cleanPath(path string) string {
-	result := filepath.Clean("/" + path)
-	if path != "" && path[len(path)-1] == '/' {
-		result += "/"
-	}
-	return result[1:]
-}
-
 // The withValidation transformer ensures that this stream is valid.
-func withValidation(target Tree) Tree {
+func (target Tree) withValidation() Tree {
 	return makeTree(func(result Tree) {
 
 		var prev Blob
@@ -27,14 +19,17 @@ func withValidation(target Tree) Tree {
 			switch {
 			case blob.Error() != nil:
 				err = blob.Error()
+
 			case len(blob.Name()) == 0 || blob.Name()[0] == '/':
 				err = fmt.Errorf("path %s is invalid\n", blob.Name())
-			case prev != nil && blob.Name() <= prev.Name():
+
+			case prev != nil && !isBlobLessThan(prev, blob):
 				err = fmt.Errorf("out of order:\n a:  %s\n vs: %s\n\n",
 					formatBlob(prev), formatBlob(blob))
-			case CleanPath(blob.Name()) != blob.Name():
-				err = fmt.Errorf("unclean path: was %s, should be %s\n",
-					blob.Name(), cleanPath(blob.Name()))
+
+			case blob.IsDir() != strings.HasSuffix(blob.Name(), "/"):
+				err = fmt.Errorf("IsDir() = %t != %t = has slash\n",
+					blob.IsDir(), strings.HasSuffix(blob.Name(), "/"))
 			}
 
 			if err != nil {
@@ -51,7 +46,13 @@ func withValidation(target Tree) Tree {
 }
 
 // The AddPrefix function transforms a Tree to exist within the given prefix.
-func AddPrefix(t Tree, prefix string) Tree {
+func (t Tree) WithPrefix(prefix string) Tree {
+	prefix = filepath.Clean(prefix)
+
+	if prefix == "." {
+		return t
+	}
+
 	return makeTree(func(result Tree) {
 
 		first := true
@@ -60,7 +61,8 @@ func AddPrefix(t Tree, prefix string) Tree {
 
 			// wait until we know Source() before emitting prefix directories.
 			if first {
-				parts := strings.Split(CleanPath(prefix), "/")
+				parts := strings.Split(prefix, "/")
+
 				if parts[0] != "" {
 					for i := 0; i < len(parts); i++ {
 						path := filepath.Join(parts[0:i+1]...) + "/"
@@ -68,7 +70,8 @@ func AddPrefix(t Tree, prefix string) Tree {
 							name:     path,
 							modtime:  time.Now(),
 							contents: strings.NewReader(""),
-							source:   blob.Source(),
+							source:   "prefix for " + blob.Source(),
+							mode:     os.FileMode(0755) | os.ModeDir,
 						}
 					}
 				}
@@ -87,22 +90,26 @@ func AddPrefix(t Tree, prefix string) Tree {
 	})
 }
 
-// The lessThan comparator compares two (possibly nil) blobs.
-func lessThan(a, b Blob) bool {
-	if b == nil {
-		return (a != nil)
-	} else if a == nil {
-		return false
+// The shallowDiff function determines if two blobs represent the same content.
+func shallowDiff(a, b Blob) string {
+	dt := a.ModTime().UTC().Unix() - b.ModTime().UTC().Unix()
+
+	if !(-2 <= dt && dt <= 2) {
+		return fmt.Sprintf("a.ModTime() = %s != %s = b.ModTime()",
+			a.ModTime(), b.ModTime())
 	}
 
-	return a.Name() < b.Name()
-}
+	if a.Size() != b.Size() {
+		return fmt.Sprintf("a.Size() = %d != %d = b.Size()",
+			a.Size(), b.Size())
+	}
 
-// The shallowDiff function determines if two blobs represent the same content.
-func shallowDiff(a, b Blob) bool {
-	return (a.ModTime().Unix() != b.ModTime().Unix() ||
-		a.Size() != b.Size() ||
-		a.Mode() != b.Mode())
+	if a.Mode() != b.Mode() {
+		return fmt.Sprintf("a.Mode() = %s != %s = b.Mode()",
+			a.Mode(), b.Mode())
+	}
+
+	return ""
 }
 
 // The overlayTwo method applies the results of over on top of under.
@@ -113,10 +120,10 @@ func overlayTwo(under, over Tree) Tree {
 		hover := <-over
 
 		for hunder != nil || hover != nil {
-			if lessThan(hunder, hover) {
+			if isBlobLessThan(hunder, hover) {
 				result <- hunder
 				hunder = <-under
-			} else if lessThan(hover, hunder) {
+			} else if isBlobLessThan(hover, hunder) {
 				result <- hover
 				hover = <-over
 			} else {
@@ -129,8 +136,8 @@ func overlayTwo(under, over Tree) Tree {
 	})
 }
 
-// The AddOverlay method applies all elements of the slice in order.
-func AddOverlay(trees []Tree) Tree {
+// The OverlayAll method applies all subsequent elements on top of the first.
+func OverlayAll(trees []Tree) Tree {
 
 	if len(trees) == 1 {
 		return trees[0]
@@ -140,8 +147,8 @@ func AddOverlay(trees []Tree) Tree {
 
 	p := len(trees) / 2
 	return overlayTwo(
-		Overlay(trees[:p]),
-		Overlay(trees[p:]),
+		OverlayAll(trees[:p]),
+		OverlayAll(trees[p:]),
 	)
 
 }
@@ -154,7 +161,7 @@ func Difference(under, over Tree) Tree {
 		hover := <-over
 
 		for hunder != nil || hover != nil {
-			if lessThan(hunder, hover) { // removed
+			if isBlobLessThan(hunder, hover) { // removed
 
 				c := copyof(hunder) // mark as deletion
 				c.contents = nil
@@ -163,15 +170,25 @@ func Difference(under, over Tree) Tree {
 				result <- c
 				hunder = <-under
 
-			} else if lessThan(hover, hunder) { // added
+			} else if isBlobLessThan(hover, hunder) { // added
 
 				result <- hover
 				hover = <-over
 
 			} else {
 
-				if shallowDiff(hover, hunder) {
-					result <- hover
+				difference := shallowDiff(hover, hunder)
+
+				if difference != "" {
+					result <- &memBlob{
+						name:     hover.Name(),
+						modtime:  hover.ModTime(),
+						size:     hover.Size(),
+						mode:     hover.Mode(),
+						contents: hover.Contents(),
+						err:      hover.Error(),
+						source:   fmt.Sprintf("%s; %s", hover.Source(), difference),
+					}
 				}
 				hover = <-over
 				hunder = <-under

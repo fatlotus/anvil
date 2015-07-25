@@ -1,4 +1,4 @@
-package hephaestus
+package anvil
 
 import (
 	"io"
@@ -13,7 +13,7 @@ import (
 type Blob interface {
 	Contents() io.Reader // an io.Reader, or nil, if this Blob is a deletion
 	Error() error        // if any errors were encountered after or during this record
-	Source() string      // where this version came from
+	Source() string      // where this blob came from
 	os.FileInfo
 }
 

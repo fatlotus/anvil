@@ -1,4 +1,4 @@
-package hephaestus
+package anvil
 
 import (
 	"io"
@@ -52,6 +52,7 @@ func (b *memBlob) Source() string {
 	return b.source
 }
 
+// The copyof function converts a Blob into a new, mutable Blob.
 func copyof(b Blob) *memBlob {
 	return &memBlob{
 		name:     b.Name(),

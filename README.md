@@ -1,7 +1,6 @@
-# Hephaestus
+# Anvil
 
-The Hephaestus library is a Golang rewrite of RAdminD; it is covered under the
-MIT License:
+This project is a Golang rewrite of RAdminD.
 
 Copyright (c) 2015 Jeremy Archer
 
