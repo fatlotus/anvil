@@ -10,7 +10,7 @@ import (
 func FromDirectory(root string) Tree {
 	root = filepath.Clean(root)
 
-	return makeTree(func(result Tree) {
+	return makeTree(func(result chan<- Blob) {
 		filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 			var contents *os.File
 

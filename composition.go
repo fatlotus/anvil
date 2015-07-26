@@ -1,4 +1,4 @@
-package hephaestus
+package anvil
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 // The withValidation transformer ensures that this stream is valid.
 func (target Tree) withValidation() Tree {
-	return makeTree(func(result Tree) {
+	return makeTree(func(result chan<- Blob) {
 
 		var prev Blob
 		var err error
@@ -53,7 +53,7 @@ func (t Tree) WithPrefix(prefix string) Tree {
 		return t
 	}
 
-	return makeTree(func(result Tree) {
+	return makeTree(func(result chan<- Blob) {
 
 		first := true
 
@@ -114,7 +114,7 @@ func shallowDiff(a, b Blob) string {
 
 // The overlayTwo method applies the results of over on top of under.
 func overlayTwo(under, over Tree) Tree {
-	return makeTree(func(result Tree) {
+	return makeTree(func(result chan<- Blob) {
 
 		hunder := <-under
 		hover := <-over
@@ -155,7 +155,7 @@ func OverlayAll(trees []Tree) Tree {
 
 // The Difference method computes changes to get from under to over.
 func Difference(under, over Tree) Tree {
-	return makeTree(func(result Tree) {
+	return makeTree(func(result chan<- Blob) {
 
 		hunder := <-under
 		hover := <-over

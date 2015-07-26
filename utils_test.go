@@ -61,7 +61,7 @@ func compareTrees(at, bt Tree, t *testing.T) {
 }
 
 func fixtureTree(blobs []Blob) Tree {
-	return makeTree(func(r Tree) {
+	return makeTree(func(r chan<- Blob) {
 		for _, b := range blobs {
 			r <- b
 		}

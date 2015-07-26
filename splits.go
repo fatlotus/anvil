@@ -9,8 +9,8 @@ import (
 //
 // Note: this function buffers the contents of every
 func (t Tree) Split() (Tree, Tree) {
-	a := make(Tree)
-	b := make(Tree)
+	a := make(chan Blob)
+	b := make(chan Blob)
 
 	go func() {
 		for blob := range t {

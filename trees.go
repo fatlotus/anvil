@@ -21,4 +21,4 @@ type Blob interface {
 // To read through the tree, simply iterate through the channel until it it
 // closes or one of the entries has the Error() value set. In that case, report
 // an error and terminate; continuing to read has undefined behavior.
-type Tree chan Blob
+type Tree <-chan Blob

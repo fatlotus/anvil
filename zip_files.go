@@ -11,7 +11,7 @@ const uint32max = 4294967295
 
 // Reads a Tree from the given zip file stream.
 func FromZip(r *zip.Reader, source string) Tree {
-	return makeTree(func(result Tree) {
+	return makeTree(func(result chan<- Blob) {
 
 		blobs := make([]Blob, 0)
 
