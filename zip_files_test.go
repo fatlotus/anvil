@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestTreeToZipAndBack(t *testing.T) {
+func TestStreamToZipAndBack(t *testing.T) {
 	// write fixture to tree
 	buf := new(bytes.Buffer)
-	fixtureValidTree().ToZip(zip.NewWriter(buf))
+	fixtureValidStream().ToZip(zip.NewWriter(buf))
 
 	// read fixture back
 	rdr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
@@ -17,5 +17,5 @@ func TestTreeToZipAndBack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	compareTrees(fixtureValidTree(), FromZip(rdr, "Archive.zip"), t)
+	compareStreams(fixtureValidStream(), FromZip(rdr, "Archive.zip"), t)
 }

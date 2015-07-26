@@ -5,10 +5,10 @@ import (
 	"io"
 )
 
-// Creates two trees from a single Tree.
+// Creates two trees from a single Stream.
 //
 // Note: this function buffers the contents of every
-func (t Tree) Split() (Tree, Tree) {
+func (t Stream) Split() (Stream, Stream) {
 	a := make(chan Blob)
 	b := make(chan Blob)
 

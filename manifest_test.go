@@ -1,34 +1,34 @@
 package anvil
 
 import (
-	"path/filepath"
-	"io/ioutil"
-	"testing"
 	"archive/zip"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
-	"fmt"
-	"time"
+	"path/filepath"
 	"strings"
-	"net/http/httptest"
-	"net/http"
+	"testing"
+	"time"
 )
 
-// Dump the given Tree onto the particular location on disk.
-func dumpZip(tree Tree, path string, t *testing.T) {
+// Dump the given Stream onto the particular location on disk.
+func dumpZip(tree Stream, path string, t *testing.T) {
 	fp, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	if err := tree.ToZip(zip.NewWriter(fp)); err != nil {
 		t.Fatal(err)
 	}
 }
 
 // A simple manifest fixture.
-func fixtureManifest() Tree {
-	return fixtureTree([]Blob{
+func fixtureManifest() Stream {
+	return fixtureStream([]Blob{
 		&memBlob{
 			name:     "a/",
 			mode:     os.FileMode(0755) | os.ModeDir,
@@ -109,38 +109,38 @@ func TestManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmp)
-	
+
 	if err := os.Mkdir(filepath.Join(tmp, "d"), os.FileMode(0755)); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Add several overlays to the image.
-	dumpZip(fixtureValidTree(), filepath.Join(tmp, "A.zip"), t)
-	dumpZip(fixtureValidTree(), filepath.Join(tmp, "d", "C.zip"), t)
-	dumpZip(fixtureOverlayTree(), filepath.Join(tmp, "B.zip"), t)
-	
+	dumpZip(fixtureValidStream(), filepath.Join(tmp, "A.zip"), t)
+	dumpZip(fixtureValidStream(), filepath.Join(tmp, "d", "C.zip"), t)
+	dumpZip(fixtureOverlayStream(), filepath.Join(tmp, "B.zip"), t)
+
 	if err := RecomputeManifest(tmp); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Compute the result of composing each archive.
 	img, err := FromImage(url.URL{Path: tmp, Scheme: "file"})
 	if err != nil {
 		fmt.Printf("tmp: %s; err: %s\n", tmp, err)
 		time.Sleep(60 * time.Second)
 	}
-	
+
 	// Compute the result over HTTP.
 	server := httptest.NewServer(http.FileServer(http.Dir(tmp)))
 	defer server.Close()
-	
+
 	httpimg, err := FromImage(url.URL{Path: tmp, Scheme: "file"})
 	if err != nil {
 		fmt.Printf("tmp: %s; err: %s\n", tmp, err)
 		time.Sleep(60 * time.Second)
 	}
-	
+
 	// Compare against the refernce.
-	compareTrees(img, fixtureManifest(), t)
-	compareTrees(httpimg, fixtureManifest(), t)
+	compareStreams(img, fixtureManifest(), t)
+	compareStreams(httpimg, fixtureManifest(), t)
 }

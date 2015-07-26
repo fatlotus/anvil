@@ -1,15 +1,15 @@
 package anvil
 
 import (
+	"archive/zip"
 	"encoding/json"
+	"fmt"
+	"github.com/DHowett/ranger"
+	"io"
+	"net/url"
 	"os"
 	"path/filepath"
-	"archive/zip"
-	"net/url"
-	"io"
-	"github.com/DHowett/ranger"
 	"time"
-	"fmt"
 )
 
 // A Resource is a blob that mostly acts like an os.File.
@@ -26,42 +26,42 @@ type rangerResource struct {
 }
 
 func (r *rangerResource) Stat() (os.FileInfo, error) { return r, nil }
-func (r *rangerResource) Name() string { return r.name }
-func (r *rangerResource) IsDir() bool { return false }
-func (r *rangerResource) ModTime() time.Time { return time.Now() }
-func (r *rangerResource) Mode() os.FileMode { return 0 }
-func (r *rangerResource) Size() int64 { return r.Length() }
-func (r *rangerResource) Sys() interface{} { return nil }
+func (r *rangerResource) Name() string               { return r.name }
+func (r *rangerResource) IsDir() bool                { return false }
+func (r *rangerResource) ModTime() time.Time         { return time.Now() }
+func (r *rangerResource) Mode() os.FileMode          { return 0 }
+func (r *rangerResource) Size() int64                { return r.Length() }
+func (r *rangerResource) Sys() interface{}           { return nil }
 
 // Opens the given URL, returning a Resource.
 func openURL(url *url.URL) (resource, error) {
 	switch url.Scheme {
 	case "http", "https":
-		
+
 		// Resolve the URL as a remote HTTP/HTTPS stream.
 		reader, err := ranger.NewReader(&ranger.HTTPRanger{URL: url})
 		if err != nil {
 			return nil, err
 		}
-		
+
 		return &rangerResource{url.String(), reader}, nil
-		
+
 	case "file", "":
-		
+
 		// Resolve the URL as a local file.
 		return os.Open(url.Path)
-		
+
 	default:
 		return nil, fmt.Errorf("Unknown URL scheme: %s", url)
 	}
 }
 
 // The FromImage loader resolves an image as a manifest file.
-func FromImage(base url.URL) (Tree, error) {
+func FromImage(base url.URL) (Stream, error) {
 
 	// Read the manifest as a file.
 	base.Path += "/"
-	
+
 	res, err := openURL(
 		base.ResolveReference(&url.URL{Path: "./MANIFEST.json"}))
 	if err != nil {
@@ -72,30 +72,30 @@ func FromImage(base url.URL) (Tree, error) {
 	var m manifest
 	json.NewDecoder(res).Decode(&m)
 
-	// Create a Tree object for each manifest entry.
-	trees := make([]Tree, len(m.Entries))
+	// Create a Stream object for each manifest entry.
+	trees := make([]Stream, len(m.Entries))
 
 	for i, entry := range m.Entries {
 		parsed, err := url.Parse(entry.URL)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		res, err := openURL(base.ResolveReference(parsed))
 		if err != nil {
 			return nil, err
 		}
-		
+
 		stat, err := res.Stat()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		reader, err := zip.NewReader(res, stat.Size())
 		if err != nil {
 			return nil, err
 		}
-		
+
 		t := FromZip(reader, stat.Name()).WithPrefix(filepath.Dir(entry.URL))
 		trees[i] = t
 	}
@@ -150,7 +150,7 @@ func RecomputeManifest(root string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if err := json.NewEncoder(file).Encode(&manifest); err != nil {
 		return err
 	}

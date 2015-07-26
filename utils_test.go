@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func compareTrees(at, bt Tree, t *testing.T) {
+func compareStreams(at, bt Stream, t *testing.T) {
 	la := 0
 	lb := 0
 
@@ -60,16 +60,16 @@ func compareTrees(at, bt Tree, t *testing.T) {
 	}
 }
 
-func fixtureTree(blobs []Blob) Tree {
-	return makeTree(func(r chan<- Blob) {
+func fixtureStream(blobs []Blob) Stream {
+	return makeStream(func(r chan<- Blob) {
 		for _, b := range blobs {
 			r <- b
 		}
 	})
 }
 
-func fixtureOverlayChanges() Tree {
-	return fixtureTree([]Blob{
+func fixtureOverlayChanges() Stream {
+	return fixtureStream([]Blob{
 		&memBlob{
 			name:     "a/b",
 			mode:     os.FileMode(0440),
@@ -89,8 +89,8 @@ func fixtureOverlayChanges() Tree {
 	})
 }
 
-func fixtureOverlayTree() Tree {
-	return fixtureTree([]Blob{
+func fixtureOverlayStream() Stream {
+	return fixtureStream([]Blob{
 		&memBlob{
 			name:     "a/",
 			mode:     os.FileMode(0755) | os.ModeDir,
@@ -117,8 +117,8 @@ func fixtureOverlayTree() Tree {
 	})
 }
 
-func fixtureValidTree() Tree {
-	return fixtureTree([]Blob{
+func fixtureValidStream() Stream {
+	return fixtureStream([]Blob{
 		&memBlob{
 			name:     "a/",
 			mode:     os.FileMode(0755) | os.ModeDir,

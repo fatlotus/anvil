@@ -17,8 +17,8 @@ type Blob interface {
 	os.FileInfo
 }
 
-// A tree represents a stream of Blobs sorted in lexicographic order.
+// A stream is a sequence of Blobs sorted in lexicographic order.
 // To read through the tree, simply iterate through the channel until it it
 // closes or one of the entries has the Error() value set. In that case, report
 // an error and terminate; continuing to read has undefined behavior.
-type Tree <-chan Blob
+type Stream <-chan Blob

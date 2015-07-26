@@ -5,7 +5,7 @@ import (
 )
 
 // Prints a user-parseable description of the tree in sorted order.
-func (t Tree) ToDebugOutput() {
+func (t Stream) ToDebugOutput() {
 	prev := make([]rune, 0)
 
 	for b := range t {

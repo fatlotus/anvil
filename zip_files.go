@@ -9,9 +9,9 @@ import (
 
 const uint32max = 4294967295
 
-// Reads a Tree from the given zip file stream.
-func FromZip(r *zip.Reader, source string) Tree {
-	return makeTree(func(result chan<- Blob) {
+// Reads a Stream from the given zip file stream.
+func FromZip(r *zip.Reader, source string) Stream {
+	return makeStream(func(result chan<- Blob) {
 
 		blobs := make([]Blob, 0)
 
@@ -68,7 +68,7 @@ func FromZip(r *zip.Reader, source string) Tree {
 }
 
 // Writes this tree to the given zip file, returning an error on failure.
-func (t Tree) ToZip(w *zip.Writer) error {
+func (t Stream) ToZip(w *zip.Writer) error {
 	for blob := range t {
 
 		hdr, err := zip.FileInfoHeader(blob)

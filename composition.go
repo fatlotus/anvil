@@ -9,8 +9,8 @@ import (
 )
 
 // The withValidation transformer ensures that this stream is valid.
-func (target Tree) withValidation() Tree {
-	return makeTree(func(result chan<- Blob) {
+func (target Stream) withValidation() Stream {
+	return makeStream(func(result chan<- Blob) {
 
 		var prev Blob
 		var err error
@@ -45,15 +45,15 @@ func (target Tree) withValidation() Tree {
 	})
 }
 
-// The AddPrefix function transforms a Tree to exist within the given prefix.
-func (t Tree) WithPrefix(prefix string) Tree {
+// The AddPrefix function transforms a Stream to exist within the given prefix.
+func (t Stream) WithPrefix(prefix string) Stream {
 	prefix = filepath.Clean(prefix)
 
 	if prefix == "." {
 		return t
 	}
 
-	return makeTree(func(result chan<- Blob) {
+	return makeStream(func(result chan<- Blob) {
 
 		first := true
 
@@ -113,8 +113,8 @@ func shallowDiff(a, b Blob) string {
 }
 
 // The overlayTwo method applies the results of over on top of under.
-func overlayTwo(under, over Tree) Tree {
-	return makeTree(func(result chan<- Blob) {
+func overlayTwo(under, over Stream) Stream {
+	return makeStream(func(result chan<- Blob) {
 
 		hunder := <-under
 		hover := <-over
@@ -137,7 +137,7 @@ func overlayTwo(under, over Tree) Tree {
 }
 
 // The OverlayAll method applies all subsequent elements on top of the first.
-func OverlayAll(trees []Tree) Tree {
+func OverlayAll(trees []Stream) Stream {
 
 	if len(trees) == 1 {
 		return trees[0]
@@ -154,8 +154,8 @@ func OverlayAll(trees []Tree) Tree {
 }
 
 // The Difference method computes changes to get from under to over.
-func Difference(under, over Tree) Tree {
-	return makeTree(func(result chan<- Blob) {
+func Difference(under, over Stream) Stream {
+	return makeStream(func(result chan<- Blob) {
 
 		hunder := <-under
 		hover := <-over

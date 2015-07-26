@@ -65,7 +65,7 @@ func copyof(b Blob) *memBlob {
 	}
 }
 
-func makeTree(handler func(chan<- Blob)) Tree {
+func makeStream(handler func(chan<- Blob)) Stream {
 	result := make(chan Blob, 0)
 
 	go func() {

@@ -5,16 +5,16 @@ import (
 )
 
 func TestSplits(t *testing.T) {
-	a, b := fixtureValidTree().Split()
+	a, b := fixtureValidStream().Split()
 	done := make(chan int)
 
 	go func() {
-		compareTrees(a, fixtureValidTree(), t)
+		compareStreams(a, fixtureValidStream(), t)
 		done <- 1
 	}()
 
 	go func() {
-		compareTrees(b, fixtureValidTree(), t)
+		compareStreams(b, fixtureValidStream(), t)
 		done <- 2
 	}()
 

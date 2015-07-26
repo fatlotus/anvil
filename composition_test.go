@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func fixtureTreeWithPrefix() Tree {
-	return fixtureTree([]Blob{
+func fixtureStreamWithPrefix() Stream {
+	return fixtureStream([]Blob{
 		&memBlob{
 			name:     "outer/",
 			mode:     os.FileMode(0755) | os.ModeDir,
@@ -56,19 +56,19 @@ func fixtureTreeWithPrefix() Tree {
 }
 
 func TestWithPrefix(t *testing.T) {
-	a := fixtureTreeWithPrefix()
-	b := fixtureValidTree().WithPrefix("outer/whoops/.././inner/")
+	a := fixtureStreamWithPrefix()
+	b := fixtureValidStream().WithPrefix("outer/whoops/.././inner/")
 
-	compareTrees(a, b, t)
+	compareStreams(a, b, t)
 }
 
 func TestNoSuperfluous(t *testing.T) {
-	compareTrees(fixtureValidTree(), fixtureValidTree().WithPrefix("./"), t)
+	compareStreams(fixtureValidStream(), fixtureValidStream().WithPrefix("./"), t)
 }
 
 func TestOverlayAll(t *testing.T) {
-	result := OverlayAll([]Tree{fixtureValidTree(), fixtureOverlayTree()})
-	diff := Difference(fixtureValidTree(), result)
+	result := OverlayAll([]Stream{fixtureValidStream(), fixtureOverlayStream()})
+	diff := Difference(fixtureValidStream(), result)
 
-	compareTrees(diff, fixtureOverlayChanges(), t)
+	compareStreams(diff, fixtureOverlayChanges(), t)
 }

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 )
 
-func FromDirectory(root string) Tree {
+func FromDirectory(root string) Stream {
 	root = filepath.Clean(root)
 
-	return makeTree(func(result chan<- Blob) {
+	return makeStream(func(result chan<- Blob) {
 		filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 			var contents *os.File
 
@@ -46,7 +46,7 @@ func FromDirectory(root string) Tree {
 	}).withValidation()
 }
 
-func (t Tree) ToDirectory(root string) error {
+func (t Stream) ToDirectory(root string) error {
 	for blob := range t {
 		if blob.Error() != nil {
 			return blob.Error()
